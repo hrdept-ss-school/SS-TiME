@@ -404,15 +404,16 @@
             <div class="input-group">
                 <label>ปรับปรุงสถานะ</label>
                 <select id="editHistStatus" class="form-control">
-                    <option value="มาปกติ">มาปกติ</option>
-                    <option value="สาย">สาย</option>
-                    <option value="ลืมสแกนกลับ">ลืมสแกนกลับ</option>
-                    <option value="ไปราชการ">ไปราชการ</option>
-                    <option value="ลากิจ">ลากิจ</option>
-                    <option value="ลาป่วย">ลาป่วย</option>
-                    <option value="รอสอบถาม">รอสอบถาม</option>
-                    <option value="ขาดราชการ">ขาดราชการ</option>
-                </select>
+		            <option value="มาปกติ">มาปกติ</option>
+		            <option value="สาย">สาย</option>
+		            <option value="ลืมสแกนกลับ">ลืมสแกนกลับ</option>
+		            <option value="ไปราชการ">ไปราชการ</option>
+		            <option value="ลากิจ">ลากิจ</option>
+		            <option value="ลาป่วย">ลาป่วย</option>
+		            <option value="รอสอบถาม">รอสอบถาม</option>
+		            <option value="ขาดราชการ">ขาดราชการ</option>
+		            <option value="หยุดปฏิบัติหน้าที่ชั่วคราว">หยุดปฏิบัติหน้าที่ชั่วคราว</option>
+		        </select>
             </div>
             <div class="input-group">
                 <label>หมายเหตุ</label>
@@ -880,11 +881,12 @@
                   let status = "มาปกติ", tIn = "", tOut = "", displayTime = rawTime;
 
                   if (rawTime === "-") {
-                      if (leaveMark === "ป") { status = "ลาป่วย"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-                      else if (leaveMark === "ก") { status = "ลากิจ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-                      else if (leaveMark === "รก" || leaveMark.includes("ราชการ")) { status = "ไปราชการ"; displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
-                      else { status = "ขาดราชการ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-                  } 
+	                  if (leaveMark === "ป") { status = "ลาป่วย"; displayTime = "-"; tIn = "-"; tOut = "-"; }
+	                  else if (leaveMark === "ก") { status = "ลากิจ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
+	                  else if (leaveMark === "ย") { status = "หยุดปฏิบัติหน้าที่ชั่วคราว"; displayTime = "ย-ย"; tIn = "ย"; tOut = "ย"; }
+	                  else if (leaveMark === "รก" || leaveMark.includes("ราชการ")) { status = "ไปราชการ"; displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
+	                  else { status = "ขาดราชการ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
+	              } 
                   else if (rawTime === "ขม-ขก") { status = "รอสอบถาม"; displayTime = "ขม-ขก"; tIn = "ขม"; tOut = "ขก"; } 
                   else if (rawTime.endsWith("ขก")) { status = "ลืมสแกนกลับ"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; } 
                   else if (rawTime.includes("ขม") || rawTime.includes("ส")) { status = "สาย"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; } 
@@ -905,13 +907,27 @@
 
   const cleanStr = (s) => String(s).replace(/\s+/g, '');
   function checkMismatches() {
+      // 🚀 1. ดักเตะคนที่ "ถูกระงับ" ออกจากไฟล์ Excel ทันที (เตะกลางอากาศก่อนเช็กอย่างอื่น)
+      parsedRecords = parsedRecords.filter(p => {
+          let dbMatch = pList.find(db => cleanStr(db.name) === cleanStr(p.name));
+          if (dbMatch && dbMatch.isActive === false) return false; // เจอว่าถูกระงับ -> เตะทิ้งทันที
+          return true; // นอกนั้นเก็บไว้
+      });
+
       let activeDB = pList.filter(p => p.isActive);
       let unregistered = [], missing = [];
-      parsedRecords.forEach(p => { if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); });
+      
+      // 2. เช็กคนแปลกปลอม (มีในสแกน แต่ไม่มีในระบบ)
+      parsedRecords.forEach(p => { 
+          if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); 
+      });
+      
+      // 3. เช็กคนหาย (มีในระบบ แต่หายไปจากไฟล์สแกน)
       activeDB.forEach(db => {
           if (db.category === "ผู้บริหาร") return; 
           if(!parsedRecords.find(p => cleanStr(p.name) === cleanStr(db.name))) missing.push(db);
       });
+      
       if(unregistered.length === 0 && missing.length === 0) proceedToPreview();
       else showMismatchModal(unregistered, missing);
   }
@@ -943,41 +959,42 @@
   }
 
   function renderPreviewTable(filterText = "") {
-      let tbody = document.getElementById('previewTableBody'); 
-      tbody.innerHTML = "";
-      if(!document.getElementById('searchBox')) document.getElementById('previewSection').insertAdjacentHTML('afterbegin', `<div style="margin-bottom: 1rem;"><input type="text" id="searchBox" class="form-control" placeholder="🔍 ค้นหารายชื่อเพื่อแก้ไขด่วน..." onkeyup="renderPreviewTable(this.value)"></div>`);
-      
-      parsedRecords.forEach((p, idx) => {
-          if(filterText && !p.name.includes(filterText)) return;
-          let bgStyle = "";
-          if (p.status === "ลืมสแกนกลับ") bgStyle = "background-color: #e0f2fe;"; 
-          else if (p.status === "รอสอบถาม") bgStyle = "background-color: #bbf7d0;"; 
-          else if (p.status === "สาย" || p.status === "ไปราชการ") bgStyle = "background-color: #fef08a;"; 
-          else if (p.status !== "มาปกติ") bgStyle = "background-color: #fef08a;"; 
-          
-          let tr = document.createElement('tr');
-          if (bgStyle) tr.style = bgStyle; 
-          tr.innerHTML = `<td data-label="ลำดับ">${idx + 1}</td>
-              <td data-label="ชื่อ-สกุล" style="font-weight: 500;">${p.name}</td>
-              <td data-label="แผนก" style="color: #666;">${p.department}</td>
-              <td data-label="เวลา"><input type="text" class="form-control" style="width: 100%;" value="${p.rawTimeStr}" onchange="updateTime(${idx}, this.value)"></td>
-              <td data-label="สถานะ"><select class="form-control" style="width: 100%; ${p.status !== 'มาปกติ' ? 'border-color: var(--danger); font-weight: bold; color: var(--danger);' : ''}" onchange="updateStatus(${idx}, this.value, this.parentNode.previousElementSibling.querySelector('input'))"><option value="มาปกติ" ${p.status==='มาปกติ'?'selected':''}>มาปกติ</option><option value="สาย" ${p.status==='สาย'?'selected':''}>สาย</option><option value="ไปราชการ" ${p.status==='ไปราชการ'?'selected':''}>ไปราชการ</option><option value="ลากิจ" ${p.status==='ลากิจ'?'selected':''}>ลากิจ</option><option value="ลาป่วย" ${p.status==='ลาป่วย'?'selected':''}>ลาป่วย</option><option value="ลืมสแกนกลับ" ${p.status==='ลืมสแกนกลับ'?'selected':''}>ลืมสแกนกลับ</option><option value="รอสอบถาม" ${p.status==='รอสอบถาม'?'selected':''}>รอสอบถาม</option><option value="ขาดราชการ" ${p.status==='ขาดราชการ'?'selected':''}>ขาดราชการ</option></select></td>
-              <td data-label="หมายเหตุ"><input type="text" class="form-control" style="width: 100%;" value="${p.remark}" onchange="parsedRecords[${idx}].remark = this.value"></td>`;
-          tbody.appendChild(tr);
-      });
-      document.getElementById('fileRecs').innerText = `(พบ ${parsedRecords.length} รายการ)`;
-  }
+	  let tbody = document.getElementById('previewTableBody'); 
+	  tbody.innerHTML = "";
+	  if(!document.getElementById('searchBox')) document.getElementById('previewSection').insertAdjacentHTML('afterbegin', `<div style="margin-bottom: 1rem;"><input type="text" id="searchBox" class="form-control" placeholder="🔍 ค้นหารายชื่อเพื่อแก้ไขด่วน..." onkeyup="renderPreviewTable(this.value)"></div>`);
+	  
+	  parsedRecords.forEach((p, idx) => {
+	      if(filterText && !p.name.includes(filterText)) return;
+	      let bgStyle = "";
+	      if (p.status === "ลืมสแกนกลับ") bgStyle = "background-color: #e0f2fe;"; 
+	      else if (p.status === "รอสอบถาม") bgStyle = "background-color: #bbf7d0;"; 
+	      else if (p.status === "สาย" || p.status === "ไปราชการ") bgStyle = "background-color: #fef08a;"; 
+	      else if (p.status !== "มาปกติ") bgStyle = "background-color: #fef08a;"; 
+	      
+	      let tr = document.createElement('tr');
+	      if (bgStyle) tr.style = bgStyle; 
+	      tr.innerHTML = `<td data-label="ลำดับ">${idx + 1}</td>
+	          <td data-label="ชื่อ-สกุล" style="font-weight: 500;">${p.name}</td>
+	          <td data-label="แผนก" style="color: #666;">${p.department}</td>
+	          <td data-label="เวลา"><input type="text" class="form-control" style="width: 100%;" value="${p.rawTimeStr}" onchange="updateTime(${idx}, this.value)"></td>
+	          <td data-label="สถานะ"><select class="form-control" style="width: 100%; ${p.status !== 'มาปกติ' ? 'border-color: var(--danger); font-weight: bold; color: var(--danger);' : ''}" onchange="updateStatus(${idx}, this.value, this.parentNode.previousElementSibling.querySelector('input'))"><option value="มาปกติ" ${p.status==='มาปกติ'?'selected':''}>มาปกติ</option><option value="สาย" ${p.status==='สาย'?'selected':''}>สาย</option><option value="ไปราชการ" ${p.status==='ไปราชการ'?'selected':''}>ไปราชการ</option><option value="ลากิจ" ${p.status==='ลากิจ'?'selected':''}>ลากิจ</option><option value="ลาป่วย" ${p.status==='ลาป่วย'?'selected':''}>ลาป่วย</option><option value="ลืมสแกนกลับ" ${p.status==='ลืมสแกนกลับ'?'selected':''}>ลืมสแกนกลับ</option><option value="รอสอบถาม" ${p.status==='รอสอบถาม'?'selected':''}>รอสอบถาม</option><option value="ขาดราชการ" ${p.status==='ขาดราชการ'?'selected':''}>ขาดราชการ</option><option value="หยุดปฏิบัติหน้าที่ชั่วคราว" ${p.status==='หยุดปฏิบัติหน้าที่ชั่วคราว'?'selected':''}>หยุดปฏิบัติหน้าที่ชั่วคราว</option></select></td>
+	          <td data-label="หมายเหตุ"><input type="text" class="form-control" style="width: 100%;" value="${p.remark}" onchange="parsedRecords[${idx}].remark = this.value"></td>`;
+	      tbody.appendChild(tr);
+	  });
+	  document.getElementById('fileRecs').innerText = `(พบ ${parsedRecords.length} รายการ)`;
+	}
 
   function updateTime(idx, val) { parsedRecords[idx].rawTimeStr = val; let pts = val.split('-'); parsedRecords[idx].timeIn = pts[0]?pts[0].trim():"-"; parsedRecords[idx].timeOut = pts[1]?pts[1].trim():"-"; }
   function updateStatus(idx, ns, tInput) {
-      parsedRecords[idx].status = ns;
-      if (ns === "ไปราชการ") { tInput.value = "08:30รก-16:30รก"; }
-      else if (ns === "ลากิจ" || ns === "ลาป่วย") { tInput.value = "-"; }
-      else if (ns === "ขาดราชการ" || (ns === "มาปกติ" && parsedRecords[idx].rawTimeStr === "")) { tInput.value = ""; }
-      else if (ns === "รอสอบถาม") { tInput.value = "ขม-ขก"; }
-      updateTime(idx, tInput.value);
-      renderPreviewTable(document.getElementById('searchBox') ? document.getElementById('searchBox').value : "");
-  }
+	  parsedRecords[idx].status = ns;
+	  if (ns === "ไปราชการ") { tInput.value = "08:30รก-16:30รก"; }
+	  else if (ns === "ลากิจ" || ns === "ลาป่วย") { tInput.value = "-"; }
+	  else if (ns === "หยุดปฏิบัติหน้าที่ชั่วคราว") { tInput.value = "ย-ย"; }
+	  else if (ns === "ขาดราชการ" || (ns === "มาปกติ" && parsedRecords[idx].rawTimeStr === "")) { tInput.value = ""; }
+	  else if (ns === "รอสอบถาม") { tInput.value = "ขม-ขก"; }
+	  updateTime(idx, tInput.value);
+	  renderPreviewTable(document.getElementById('searchBox') ? document.getElementById('searchBox').value : "");
+	}
 
   function submitReport() {
       showLoading("กำลังสร้างรายงาน...");
