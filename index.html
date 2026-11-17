@@ -655,33 +655,39 @@
         // ========================================================
         const API_URL = "https://script.google.com/macros/s/AKfycbwA5GpkHynrnyEZFQ7McSixDu_OTJTagebRfdLlOiFcnfsdy2DgY7gAG6pKvR5eQokoSA/exec"; 
 
-        const google = {
-          script: {
-            run: new Proxy({}, {
-              get: function(target, prop) {
-                if (prop === 'withSuccessHandler') { return function(cb) { target._success = cb; return google.script.run; }; }
-                if (prop === 'withFailureHandler') { return function(cb) { target._failure = cb; return google.script.run; }; }
-                return function(...args) {
-                  fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ func: prop, args: args })
-                  })
-                  .then(res => res.json())
-                  .then(out => {
-                    if (out.status === 'success' && target._success) target._success(out.data);
-                    if (out.status === 'error' && target._failure) target._failure(new Error(out.message));
-                    target._success = null; target._failure = null;
-                  })
-                  .catch(err => {
-                    if (target._failure) target._failure(err);
-                    target._success = null; target._failure = null;
-                  });
-                };
-              }
-            })
-          }
-        };
+		const google = {
+		  script: {
+		    get run() {
+		      // สร้าง handler ใหม่ทุกครั้งที่เรียก ไม่ใช้ร่วมกันระหว่าง request
+		      const h = { success: null, failure: null };
+		      const runner = new Proxy({}, {
+		        get(_, prop) {
+		          if (prop === 'withSuccessHandler') return cb => { h.success = cb; return runner; };
+		          if (prop === 'withFailureHandler') return cb => { h.failure = cb; return runner; };
+		          return (...args) => {
+		            const ctrl = new AbortController();
+		            const timer = setTimeout(() => ctrl.abort(), 60000); // ตัดทิ้งถ้าเกิน 60 วินาที
+		            fetch(API_URL, {
+		              method: 'POST',
+		              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+		              body: JSON.stringify({ func: prop, args: args }),
+		              signal: ctrl.signal
+		            })
+		            .then(res => res.json())
+		            .then(out => {
+		              if (out.status === 'success') { if (h.success) h.success(out.data); }
+		              else if (h.failure) h.failure(new Error(out.message || 'เกิดข้อผิดพลาด'));
+		            }, err => {
+		              if (h.failure) h.failure(err); else console.error(err);
+		            })
+		            .finally(() => clearTimeout(timer));
+		          };
+		        }
+		      });
+		      return runner;
+		    }
+		  }
+		};
 
         // ========================================================
         // 🚀 B. นำโค้ด JS จากไฟล์ต่างๆ มาต่อกันด้านล่างนี้ได้เลย
