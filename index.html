@@ -605,27 +605,30 @@
 	<!-- ========================================== -->
 	<script>
 	document.addEventListener("DOMContentLoaded", function() {
-	    const pwaManifest = {
-	        "name": "SS-Time",
-	        "short_name": "SS-Time",
-	        "description": "ระบบลงเวลาและประเมินผลการปฏิบัติราชการ โรงเรียนเสิงสาง",
-	        "start_url": "window.location.href", 
-	        "display": "standalone",
-	        "background_color": "#f0fdf4",
-	        "theme_color": "#3b82f6",
-	        "icons": [
-	            {
-	                "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png", 
-	                "sizes": "192x192",
-	                "type": "image/png"
-	            },
-	            {
-	                "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
-	                "sizes": "512x512",
-	                "type": "image/png"
-	            }
-	        ]
-	    };
+	    const baseUrl = new URL('./', window.location.href).href;
+
+			const pwaManifest = {
+			    "name": "SS-Time",
+			    "short_name": "SS-Time",
+			    "description": "ระบบลงเวลาและประเมินผลการปฏิบัติราชการ โรงเรียนเสิงสาง",
+			    "start_url": baseUrl,
+			    "scope": baseUrl,
+			    "display": "standalone",
+			    "background_color": "#f0fdf4",
+			    "theme_color": "#3b82f6",
+			    "icons": [
+			        {
+			            "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
+			            "sizes": "192x192",
+			            "type": "image/png"
+			        },
+			        {
+			            "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
+			            "sizes": "512x512",
+			            "type": "image/png"
+			        }
+			    ]
+			};
 	
 	    const manifestBlob = new Blob([JSON.stringify(pwaManifest)], {type: 'application/json'});
 	    const manifestUrl = URL.createObjectURL(manifestBlob);
