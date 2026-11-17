@@ -446,24 +446,33 @@
         </div>
     </div>
 
-    <!-- Mismatch Modal -->
-    <div class="modal-overlay" id="mismatchModal" style="z-index: 2500;">
-        <div class="modal-card bottom-sheet">
-            <div class="modal-header">
-                <h3 style="color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> พบข้อมูลไม่ตรงกัน</h3>
-                <button class="modal-close" onclick="closeMismatchModal()"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="unregisteredSection" style="display:none; margin-bottom: 1.5rem;">
-                <h4 style="color: var(--info);"><i class="fa-solid fa-user-plus"></i> พบในไฟล์สแกน แต่ไม่มีในระบบ</h4>
-                <div class="table-container" style="max-height: 200px;"><table class="table-preview table-cards"><tbody id="unregisteredList"></tbody></table></div>
-            </div>
-            <div id="missingSection" style="display:none; margin-bottom: 1.5rem;">
-                <h4 style="color: var(--danger);"><i class="fa-solid fa-user-minus"></i> ขาดหายจากไฟล์สแกน (ไม่นับผู้บริหาร)</h4>
-                <div class="table-container" style="max-height: 200px;"><table class="table-preview table-cards"><tbody id="missingList"></tbody></table></div>
-            </div>
-            <button class="btn btn-primary" style="width:100%; justify-content: center;" onclick="proceedToPreview()">รับทราบ & ข้ามไปเช็คตาราง</button>
-        </div>
-    </div>
+<!-- Mismatch Modal -->
+	<div class="modal-overlay" id="mismatchModal" style="z-index: 2500;">
+	    <div class="modal-card bottom-sheet">
+	        <div class="modal-header">
+	            <h3 style="color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> พบข้อมูลไม่ตรงกัน</h3>
+	            <button class="modal-close" onclick="closeMismatchModal()"><i class="fa-solid fa-xmark"></i></button>
+	        </div>
+	        
+	        <div id="unregisteredSection" style="display:none; margin-bottom: 1.5rem;">
+	            <h4 style="color: var(--info);"><i class="fa-solid fa-user-plus"></i> พบในไฟล์สแกน แต่ไม่มีในระบบ</h4>
+	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="unregisteredList"></tbody></table></div>
+	        </div>
+	        
+	        <div id="missingSection" style="display:none; margin-bottom: 1.5rem;">
+	            <h4 style="color: var(--danger);"><i class="fa-solid fa-user-minus"></i> ขาดหายจากไฟล์สแกน (ไม่นับผู้บริหาร)</h4>
+	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="missingList"></tbody></table></div>
+	        </div>
+	        
+	        <!-- 🌟 เพิ่มกล่องแจ้งเตือนคนถูกระงับ -->
+	        <div id="suspendedSection" style="display:none; margin-bottom: 1.5rem;">
+	            <h4 style="color: var(--gray-600);"><i class="fa-solid fa-user-lock"></i> พบชื่อถูกระงับ (ระบบจะข้ามการดึงข้อมูล)</h4>
+	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="suspendedList"></tbody></table></div>
+	        </div>
+	        
+	        <button class="btn btn-primary" style="width:100%; justify-content: center;" onclick="proceedToPreview()">รับทราบ & ข้ามไปเช็คตาราง</button>
+	    </div>
+	</div>
 
     <!-- ================= ฝั่ง Executive Dashboard ================= -->
     <div id="exec-dashboard-view">
@@ -930,47 +939,64 @@
 
   const cleanStr = (s) => String(s).replace(/\s+/g, '');
   function checkMismatches() {
-      // 🚀 1. ดักเตะคนที่ "ถูกระงับ" ออกจากไฟล์ Excel ทันที (เตะกลางอากาศก่อนเช็กอย่างอื่น)
-      parsedRecords = parsedRecords.filter(p => {
-          let dbMatch = pList.find(db => cleanStr(db.name) === cleanStr(p.name));
-          if (dbMatch && dbMatch.isActive === false) return false; // เจอว่าถูกระงับ -> เตะทิ้งทันที
-          return true; // นอกนั้นเก็บไว้
-      });
+	  let activeDB = pList.filter(p => p.isActive);
+	  let suspendedDB = pList.filter(p => !p.isActive); // หากลุ่มคนโดนระงับ
+	  let unregistered = [], missing = [], suspendedInFile = [];
+	
+	  // เช็ก 1: หาคนแปลกหน้า และ หาคนถูกระงับ
+	  parsedRecords.forEach(p => { 
+	      if(suspendedDB.find(db => cleanStr(db.name) === cleanStr(p.name))) suspendedInFile.push(p);
+	      else if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); 
+	  });
+	  
+	  // เช็ก 2: หาคนหาย
+	  activeDB.forEach(db => {
+	      if (db.category === "ผู้บริหาร") return; 
+	      if(!parsedRecords.find(p => cleanStr(p.name) === cleanStr(db.name))) missing.push(db);
+	  });
+	  
+	  if(unregistered.length === 0 && missing.length === 0 && suspendedInFile.length === 0) proceedToPreview();
+	  else showMismatchModal(unregistered, missing, suspendedInFile);
+	}
 
-      let activeDB = pList.filter(p => p.isActive);
-      let unregistered = [], missing = [];
-      
-      // 2. เช็กคนแปลกปลอม (มีในสแกน แต่ไม่มีในระบบ)
-      parsedRecords.forEach(p => { 
-          if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); 
-      });
-      
-      // 3. เช็กคนหาย (มีในระบบ แต่หายไปจากไฟล์สแกน)
-      activeDB.forEach(db => {
-          if (db.category === "ผู้บริหาร") return; 
-          if(!parsedRecords.find(p => cleanStr(p.name) === cleanStr(db.name))) missing.push(db);
-      });
-      
-      if(unregistered.length === 0 && missing.length === 0) proceedToPreview();
-      else showMismatchModal(unregistered, missing);
-  }
-
-  function showMismatchModal(unreg, miss) {
-      const uList = document.getElementById('unregisteredList'), mList = document.getElementById('missingList');
-      uList.innerHTML = ''; mList.innerHTML = '';
-      if(unreg.length > 0) {
-          unreg.forEach(p => { uList.innerHTML += `<tr><td data-label="ชื่อ">${p.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--success); border-color: var(--success);" onclick="openAddFromMismatch('${p.name}')">[+ เพิ่มเข้าฐานข้อมูล]</button></td></tr>`; });
-          document.getElementById('unregisteredSection').style.display = 'block';
-      } else { document.getElementById('unregisteredSection').style.display = 'none'; }
-      if(miss.length > 0) {
-          miss.forEach(db => { mList.innerHTML += `<tr><td data-label="ชื่อ">${db.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--danger); border-color: var(--danger);" onclick="suspendFromMismatch(${db.row})">[ระงับการทำงาน]</button></td></tr>`; });
-          document.getElementById('missingSection').style.display = 'block';
-      } else { document.getElementById('missingSection').style.display = 'none'; }
-      document.getElementById('mismatchModal').classList.add('active');
-  }
+	function showMismatchModal(unreg, miss, suspendedInFile) {
+	  const uList = document.getElementById('unregisteredList');
+	  const mList = document.getElementById('missingList');
+	  const sList = document.getElementById('suspendedList'); // ตัวแปรใหม่
+	  uList.innerHTML = ''; mList.innerHTML = ''; sList.innerHTML = '';
+	  
+	  if(unreg.length > 0) {
+	      unreg.forEach(p => { uList.innerHTML += `<tr><td data-label="ชื่อ">${p.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--success); border-color: var(--success);" onclick="openAddFromMismatch('${p.name}')">[+ เพิ่มเข้าฐานข้อมูล]</button></td></tr>`; });
+	      document.getElementById('unregisteredSection').style.display = 'block';
+	  } else { document.getElementById('unregisteredSection').style.display = 'none'; }
+	  
+	  if(miss.length > 0) {
+	      miss.forEach(db => { mList.innerHTML += `<tr><td data-label="ชื่อ">${db.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--danger); border-color: var(--danger);" onclick="suspendFromMismatch(${db.row})">[ระงับการทำงาน]</button></td></tr>`; });
+	      document.getElementById('missingSection').style.display = 'block';
+	  } else { document.getElementById('missingSection').style.display = 'none'; }
+	  
+	  // 🌟 โชว์คนถูกระงับ
+	  if(suspendedInFile && suspendedInFile.length > 0) {
+	      suspendedInFile.forEach(p => { sList.innerHTML += `<tr><td data-label="ชื่อ" style="color: var(--gray-600);"><i class="fa-solid fa-lock"></i> ${p.name}</td><td data-label="สถานะ" style="text-align: right; color: var(--gray-500); font-size: 0.8rem;">ถูกระงับแล้ว</td></tr>`; });
+	      document.getElementById('suspendedSection').style.display = 'block';
+	  } else { document.getElementById('suspendedSection').style.display = 'none'; }
+	
+	  document.getElementById('mismatchModal').classList.add('active');
+	}
 
   function closeMismatchModal() { document.getElementById('mismatchModal').classList.remove('active'); }
-  function proceedToPreview() { closeMismatchModal(); renderPreviewTable(); document.getElementById('previewSection').style.display = 'block'; document.getElementById('btnNext1').disabled = false; }
+  function proceedToPreview() { 
+	  closeMismatchModal(); 
+	  // 🚀 เตะคนถูกระงับทิ้งกลางอากาศ ก่อนส่งไปวาดตารางพรีวิว
+	  parsedRecords = parsedRecords.filter(p => {
+	      let dbMatch = pList.find(db => cleanStr(db.name) === cleanStr(p.name));
+	      if (dbMatch && dbMatch.isActive === false) return false;
+	      return true;
+	  });
+	  renderPreviewTable(); 
+	  document.getElementById('previewSection').style.display = 'block'; 
+	  document.getElementById('btnNext1').disabled = false; 
+	}
   function openAddFromMismatch(name) { closeMismatchModal(); openPersonnelModal(-1); document.getElementById('pName').value = name; }
   function suspendFromMismatch(row) {
       if(!confirm("แน่ใจหรือไม่? (ระบบจะไม่นำไปคิดสถิติอีก)")) return;
