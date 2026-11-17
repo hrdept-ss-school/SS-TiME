@@ -600,48 +600,49 @@
     </script>
 
 
-    <!-- ========================================== -->
-	<!-- 🚀 ระบบ PWA (Progressive Web App) -->
 	<!-- ========================================== -->
-	<script>
-	document.addEventListener("DOMContentLoaded", function() {
-	    const baseUrl = new URL('./', window.location.href).href;
+    <!-- 🚀 ระบบ PWA (Progressive Web App) -->
+    <!-- ========================================== -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. กำหนด URL ปัจจุบันแบบเต็ม (แก้ปัญหา start_url invalid)
+        const baseUrl = new URL('./', window.location.href).href;
 
-			const pwaManifest = {
-			    "name": "SS-Time",
-			    "short_name": "SS-Time",
-			    "description": "ระบบลงเวลาและประเมินผลการปฏิบัติราชการ โรงเรียนเสิงสาง",
-			    "start_url": baseUrl,
-			    "scope": baseUrl,
-			    "display": "standalone",
-			    "background_color": "#f0fdf4",
-			    "theme_color": "#3b82f6",
-			    "icons": [
-			        {
-			            "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
-			            "sizes": "192x192",
-			            "type": "image/png"
-			        },
-			        {
-			            "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
-			            "sizes": "512x512",
-			            "type": "image/png"
-			        }
-			    ]
-			};
-	
-	    const manifestBlob = new Blob([JSON.stringify(pwaManifest)], {type: 'application/json'});
-	    const manifestUrl = URL.createObjectURL(manifestBlob);
-	    document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="${manifestUrl}">`);
-	
-	    // เรียก Service Worker จากไฟล์จริงที่เราเพิ่งสร้าง
-	    if ('serviceWorker' in navigator) {
-	        navigator.serviceWorker.register('./sw.js')
-	            .then(() => console.log('✅ PWA Service Worker ติดตั้งสำเร็จ!'))
-	            .catch(err => console.warn('⚠️ PWA Service Worker มีปัญหา:', err));
-	    }
-	});
-	</script>
+        const pwaManifest = {
+            "name": "SS-Time",
+            "short_name": "SS-Time",
+            "description": "ระบบลงเวลาและประเมินผลการปฏิบัติราชการ โรงเรียนเสิงสาง",
+            "start_url": baseUrl,
+            "scope": baseUrl,
+            "display": "standalone",
+            "background_color": "#f0fdf4",
+            "theme_color": "#3b82f6",
+            "icons": [
+                {
+                    "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png", 
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "https://i.postimg.cc/PqxQ0r2P/SSATT.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+
+        // 2. แปลงเป็น Data URI ฝังลงใน <head>
+        const manifestData = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(pwaManifest));
+        document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="${manifestData}">`);
+
+        // 3. ลงทะเบียน Service Worker (ใส่ ?v= เพื่อป้องกันเบราว์เซอร์จำ Cache เก่า)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js?v=' + new Date().getTime())
+                .then(() => console.log('✅ PWA Service Worker ติดตั้งสำเร็จ!'))
+                .catch(err => console.warn('⚠️ PWA Service Worker มีปัญหา:', err));
+        }
+    });
+    </script>
 
     <!-- 📌 3.5 ย้ายไลบรารี Chart.js มาวางตรงนี้แทน (เพื่อไม่ให้พัง) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
