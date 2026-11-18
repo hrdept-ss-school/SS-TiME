@@ -912,17 +912,40 @@
                   let leaveMark = String(row[10] ?? "").trim();
                   let status = "มาปกติ", tIn = "", tOut = "", displayTime = rawTime;
 
-                  if (rawTime === "-") {
-	                  if (leaveMark === "ป") { status = "ลาป่วย"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-	                  else if (leaveMark === "ก") { status = "ลากิจ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-	                  else if (leaveMark === "ย") { status = "หยุดปฏิบัติหน้าที่ชั่วคราว"; displayTime = "ย-ย"; tIn = "ย"; tOut = "ย"; }
-	                  else if (leaveMark === "รก" || leaveMark.includes("ราชการ")) { status = "ไปราชการ"; displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
-	                  else { status = "ขาดราชการ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
-	              } 
-                  else if (rawTime === "ขม-ขก") { status = "รอสอบถาม"; displayTime = "ขม-ขก"; tIn = "ขม"; tOut = "ขก"; } 
-                  else if (rawTime.endsWith("ขก")) { status = "ลืมสแกนกลับ"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; } 
-                  else if (rawTime.includes("ขม") || rawTime.includes("ส")) { status = "สาย"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; } 
-                  else if (rawTime === "" || rawTime === "NaN") { status = "ขาดราชการ"; displayTime = ""; tIn = "-"; tOut = "-"; } 
+                  // 🚀 1. กวาดสายตาเช็กทั้งในช่องเวลา และ ช่องหมายเหตุ เพื่อความชัวร์ 100%
+                  let isLate = rawTime.includes("ส") || rawTime.includes("ขม") || leaveMark === "ส" || leaveMark.includes("สาย");
+                  let isGov = rawTime.includes("รก") || leaveMark === "รก" || leaveMark.includes("ราชการ");
+                  let isSick = leaveMark === "ป" || leaveMark.includes("ป่วย");
+                  let isPersonal = leaveMark === "ก" || leaveMark.includes("ลากิจ");
+                  let isSuspend = leaveMark === "ย" || leaveMark.includes("หยุด");
+
+                  // 🚀 2. ตัดสินสถานะตามความสำคัญ (เรียงจากบนลงล่าง)
+                  if (isGov) { 
+                      status = "ไปราชการ"; 
+                      if (rawTime === "-" || rawTime === "") { displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
+                      else { let pts = rawTime.split('-'); tIn = pts[0]?pts[0].trim():"-"; tOut = pts[1]?pts[1].trim():"-"; }
+                  }
+                  else if (isSuspend) {
+                      status = "หยุดปฏิบัติหน้าที่ชั่วคราว"; displayTime = "ย-ย"; tIn = "ย"; tOut = "ย";
+                  }
+                  else if (isSick) { status = "ลาป่วย"; displayTime = "-"; tIn = "-"; tOut = "-"; }
+                  else if (isPersonal) { status = "ลากิจ"; displayTime = "-"; tIn = "-"; tOut = "-"; }
+                  else if (rawTime === "-") {
+                      status = "ขาดราชการ"; displayTime = "-"; tIn = "-"; tOut = "-";
+                  }
+                  else if (rawTime === "ขม-ขก") { 
+                      status = "รอสอบถาม"; displayTime = "ขม-ขก"; tIn = "ขม"; tOut = "ขก"; 
+                  }
+                  else if (rawTime.endsWith("ขก")) { 
+                      status = "ลืมสแกนกลับ"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; 
+                  }
+                  else if (isLate) { 
+                      status = "สาย"; 
+                      let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; 
+                  }
+                  else if (rawTime === "" || rawTime === "NaN") { 
+                      status = "ขาดราชการ"; displayTime = ""; tIn = "-"; tOut = "-"; 
+                  }
                   else {
                       let pts = rawTime.split('-');
                       tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-";
