@@ -919,7 +919,7 @@
                   let isPersonal = leaveMark === "ก" || leaveMark.includes("ลากิจ");
                   let isSuspend = leaveMark === "ย" || leaveMark.includes("หยุด");
 
-                  // 🚀 2. ตัดสินสถานะตามความสำคัญ (เรียงจากบนลงล่าง)
+// 🚀 2. ตัดสินสถานะตามความสำคัญ (เรียงจากบนลงล่าง)
                   if (isGov) { 
                       status = "ไปราชการ"; 
                       if (rawTime === "-" || rawTime === "") { displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
@@ -936,12 +936,14 @@
                   else if (rawTime === "ขม-ขก") { 
                       status = "รอสอบถาม"; displayTime = "ขม-ขก"; tIn = "ขม"; tOut = "ขก"; 
                   }
-                  else if (rawTime.endsWith("ขก")) { 
-                      status = "ลืมสแกนกลับ"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; 
-                  }
+                  // 🌟 ย้ายเงื่อนไข "สาย" ขึ้นมาไว้ตรงนี้! ให้ตรวจจับ "ส" ก่อนเสมอ
                   else if (isLate) { 
                       status = "สาย"; 
                       let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; 
+                  }
+                  // ถ้าไม่สาย ถึงจะมาเช็กว่า "ลืมสแกนกลับ" ไหม
+                  else if (rawTime.endsWith("ขก")) { 
+                      status = "ลืมสแกนกลับ"; let pts = rawTime.split('-'); tIn = pts[0] ? pts[0].trim() : rawTime; tOut = pts[1] ? pts[1].trim() : "-"; 
                   }
                   else if (rawTime === "" || rawTime === "NaN") { 
                       status = "ขาดราชการ"; displayTime = ""; tIn = "-"; tOut = "-"; 
