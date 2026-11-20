@@ -156,7 +156,7 @@
       /* ให้ตารางแสดงผลชิดซ้ายตรงชื่อบุคลากร */
       #evalTableBody td:nth-child(2) { text-align: left; }
 
-		/* ========================================= */
+      /* ========================================= */
       /* 🌟 สไตล์สำหรับ Custom Combo Box (ช่องตำแหน่ง) */
       /* ========================================= */
       .combo-box-wrapper { position: relative; width: 100%; }
@@ -225,8 +225,11 @@
                     
                     <div class="step-container active" id="step-1">
                         <div class="card-header"><h2>นำเข้าและตรวจสอบข้อมูล</h2></div>
-                        <div class="mobile-flex-col" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-                            <div style="flex: 1; width:100%;"><label>วันที่ประจำรายงาน</label><input type="date" id="reportDate" class="form-control"></div>
+                        <div class="mobile-flex-col" style="margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: center;">
+                            <div style="flex: 1; width:100%;">
+                                <label>วันที่ประจำรายงาน</label>
+                                <input type="date" id="reportDate" class="form-control" onchange="checkSelectedDate()">
+                            </div>
                             <div style="flex: 2; width:100%;">
                                 <label>อัปโหลดไฟล์สแกนนิ้ว (.xls)</label>
                                 <div style="position: relative; overflow: hidden; display: inline-block; width: 100%;">
@@ -235,6 +238,9 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- 🌟 กล่องแจ้งเตือนสถานะวันที่ -->
+                        <div id="dateCheckBadge" style="margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 500;"></div>
+
                         <div id="previewSection" style="display: none;">
                             <h4 style="color: var(--primary); margin-bottom: 0.5rem;"><i class="fa-solid fa-table-list"></i> ข้อมูลที่อ่านได้ <span id="fileRecs" style="color: var(--gray-600); font-weight: normal; font-size: 0.9rem;"></span></h4>
                             <div class="table-container">
@@ -427,16 +433,16 @@
             <div class="input-group">
                 <label>ปรับปรุงสถานะ</label>
                 <select id="editHistStatus" class="form-control">
-		            <option value="มาปกติ">มาปกติ</option>
-		            <option value="สาย">สาย</option>
-		            <option value="ลืมสแกนกลับ">ลืมสแกนกลับ</option>
-		            <option value="ไปราชการ">ไปราชการ</option>
-		            <option value="ลากิจ">ลากิจ</option>
-		            <option value="ลาป่วย">ลาป่วย</option>
-		            <option value="รอสอบถาม">รอสอบถาม</option>
-		            <option value="ขาดราชการ">ขาดราชการ</option>
-		            <option value="หยุดปฏิบัติหน้าที่ชั่วคราว">หยุดปฏิบัติหน้าที่ชั่วคราว</option>
-		        </select>
+                    <option value="มาปกติ">มาปกติ</option>
+                    <option value="สาย">สาย</option>
+                    <option value="ลืมสแกนกลับ">ลืมสแกนกลับ</option>
+                    <option value="ไปราชการ">ไปราชการ</option>
+                    <option value="ลากิจ">ลากิจ</option>
+                    <option value="ลาป่วย">ลาป่วย</option>
+                    <option value="รอสอบถาม">รอสอบถาม</option>
+                    <option value="ขาดราชการ">ขาดราชการ</option>
+                    <option value="หยุดปฏิบัติหน้าที่ชั่วคราว">หยุดปฏิบัติหน้าที่ชั่วคราว</option>
+                </select>
             </div>
             <div class="input-group">
                 <label>หมายเหตุ</label>
@@ -446,33 +452,33 @@
         </div>
     </div>
 
-<!-- Mismatch Modal -->
-	<div class="modal-overlay" id="mismatchModal" style="z-index: 2500;">
-	    <div class="modal-card bottom-sheet">
-	        <div class="modal-header">
-	            <h3 style="color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> พบข้อมูลไม่ตรงกัน</h3>
-	            <button class="modal-close" onclick="closeMismatchModal()"><i class="fa-solid fa-xmark"></i></button>
-	        </div>
-	        
-	        <div id="unregisteredSection" style="display:none; margin-bottom: 1.5rem;">
-	            <h4 style="color: var(--info);"><i class="fa-solid fa-user-plus"></i> พบในไฟล์สแกน แต่ไม่มีในระบบ</h4>
-	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="unregisteredList"></tbody></table></div>
-	        </div>
-	        
-	        <div id="missingSection" style="display:none; margin-bottom: 1.5rem;">
-	            <h4 style="color: var(--danger);"><i class="fa-solid fa-user-minus"></i> ขาดหายจากไฟล์สแกน (ไม่นับผู้บริหาร)</h4>
-	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="missingList"></tbody></table></div>
-	        </div>
-	        
-	        <!-- 🌟 เพิ่มกล่องแจ้งเตือนคนถูกระงับ -->
-	        <div id="suspendedSection" style="display:none; margin-bottom: 1.5rem;">
-	            <h4 style="color: var(--gray-600);"><i class="fa-solid fa-user-lock"></i> พบชื่อถูกระงับ (ระบบจะข้ามการดึงข้อมูล)</h4>
-	            <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="suspendedList"></tbody></table></div>
-	        </div>
-	        
-	        <button class="btn btn-primary" style="width:100%; justify-content: center;" onclick="proceedToPreview()">รับทราบ & ข้ามไปเช็คตาราง</button>
-	    </div>
-	</div>
+    <!-- Mismatch Modal -->
+    <div class="modal-overlay" id="mismatchModal" style="z-index: 2500;">
+        <div class="modal-card bottom-sheet">
+            <div class="modal-header">
+                <h3 style="color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> พบข้อมูลไม่ตรงกัน</h3>
+                <button class="modal-close" onclick="closeMismatchModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="unregisteredSection" style="display:none; margin-bottom: 1.5rem;">
+                <h4 style="color: var(--info);"><i class="fa-solid fa-user-plus"></i> พบในไฟล์สแกน แต่ไม่มีในระบบ</h4>
+                <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="unregisteredList"></tbody></table></div>
+            </div>
+            
+            <div id="missingSection" style="display:none; margin-bottom: 1.5rem;">
+                <h4 style="color: var(--danger);"><i class="fa-solid fa-user-minus"></i> ขาดหายจากไฟล์สแกน (ไม่นับผู้บริหาร)</h4>
+                <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="missingList"></tbody></table></div>
+            </div>
+            
+            <!-- 🌟 เพิ่มกล่องแจ้งเตือนคนถูกระงับ -->
+            <div id="suspendedSection" style="display:none; margin-bottom: 1.5rem;">
+                <h4 style="color: var(--gray-600);"><i class="fa-solid fa-user-lock"></i> พบชื่อถูกระงับ (ระบบจะข้ามการดึงข้อมูล)</h4>
+                <div class="table-container" style="max-height: 150px;"><table class="table-preview table-cards"><tbody id="suspendedList"></tbody></table></div>
+            </div>
+            
+            <button class="btn btn-primary" style="width:100%; justify-content: center;" onclick="proceedToPreview()">รับทราบ & ข้ามไปเช็คตาราง</button>
+        </div>
+    </div>
 
     <!-- ================= ฝั่ง Executive Dashboard ================= -->
     <div id="exec-dashboard-view">
@@ -632,8 +638,7 @@
         });
     </script>
 
-
-	<!-- ========================================== -->
+    <!-- ========================================== -->
     <!-- 🚀 ระบบ PWA (Progressive Web App) -->
     <!-- ========================================== -->
     <script>
@@ -680,7 +685,7 @@
     <!-- 📌 3.5 ย้ายไลบรารี Chart.js มาวางตรงนี้แทน (เพื่อไม่ให้พัง) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 
-	<!-- 📌 เครื่องมืออ่านไฟล์ Excel (SheetJS) แก้ปัญหาอัปโหลด xls ไม่ได้ -->
+    <!-- 📌 เครื่องมืออ่านไฟล์ Excel (SheetJS) แก้ปัญหาอัปโหลด xls ไม่ได้ -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- 📌 4. เริ่มส่วนของ Script (ลอจิกทั้งหมด) -->
@@ -690,45 +695,45 @@
         // ========================================================
         const API_URL = "https://script.google.com/macros/s/AKfycbwA5GpkHynrnyEZFQ7McSixDu_OTJTagebRfdLlOiFcnfsdy2DgY7gAG6pKvR5eQokoSA/exec"; 
 
-		const google = {
-		  script: {
-		    get run() {
-		      // สร้าง handler ใหม่ทุกครั้งที่เรียก ไม่ใช้ร่วมกันระหว่าง request
-		      const h = { success: null, failure: null };
-		      const runner = new Proxy({}, {
-		        get(_, prop) {
-		          if (prop === 'withSuccessHandler') return cb => { h.success = cb; return runner; };
-		          if (prop === 'withFailureHandler') return cb => { h.failure = cb; return runner; };
-		          return (...args) => {
-		            const ctrl = new AbortController();
-		            const timer = setTimeout(() => ctrl.abort(), 60000); // ตัดทิ้งถ้าเกิน 60 วินาที
-		            fetch(API_URL, {
-		              method: 'POST',
-		              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-		              body: JSON.stringify({ func: prop, args: args }),
-		              signal: ctrl.signal
-		            })
-		            .then(res => res.json())
-		            .then(out => {
-		              if (out.status === 'success') { if (h.success) h.success(out.data); }
-		              else if (h.failure) h.failure(new Error(out.message || 'เกิดข้อผิดพลาด'));
-		            }, err => {
-		              if (h.failure) h.failure(err); else console.error(err);
-		            })
-		            .finally(() => clearTimeout(timer));
-		          };
-		        }
-		      });
-		      return runner;
-		    }
-		  }
-		};
+        const google = {
+          script: {
+            get run() {
+              // สร้าง handler ใหม่ทุกครั้งที่เรียก ไม่ใช้ร่วมกันระหว่าง request
+              const h = { success: null, failure: null };
+              const runner = new Proxy({}, {
+                get(_, prop) {
+                  if (prop === 'withSuccessHandler') return cb => { h.success = cb; return runner; };
+                  if (prop === 'withFailureHandler') return cb => { h.failure = cb; return runner; };
+                  return (...args) => {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), 60000); // ตัดทิ้งถ้าเกิน 60 วินาที
+                    fetch(API_URL, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                      body: JSON.stringify({ func: prop, args: args }),
+                      signal: ctrl.signal
+                    })
+                    .then(res => res.json())
+                    .then(out => {
+                      if (out.status === 'success') { if (h.success) h.success(out.data); }
+                      else if (h.failure) h.failure(new Error(out.message || 'เกิดข้อผิดพลาด'));
+                    }, err => {
+                      if (h.failure) h.failure(err); else console.error(err);
+                    })
+                    .finally(() => clearTimeout(timer));
+                  };
+                }
+              });
+              return runner;
+            }
+          }
+        };
 
         // ========================================================
         // 🚀 B. นำโค้ด JS จากไฟล์ต่างๆ มาต่อกันด้านล่างนี้ได้เลย
         // ========================================================
 
-	  let sysToken = localStorage.getItem('ss_token') || null;
+  let sysToken = localStorage.getItem('ss_token') || null;
   let parsedRecords = [];
   let globalFileName = "";
   
@@ -772,6 +777,7 @@
           document.getElementById('signAdmin').value = name;
           loadExecutives(); 
           loadPersonnelData();
+          checkSelectedDate(); // 🌟 เช็กวันปัจจุบันทันทีที่เข้าหน้าเว็บ
           
       } else if (roleStr === "executive" || roleStr === "ผู้บริหาร") {
           document.getElementById('execName').innerText = name;
@@ -919,7 +925,7 @@
                   let isPersonal = leaveMark === "ก" || leaveMark.includes("ลากิจ");
                   let isSuspend = leaveMark === "ย" || leaveMark.includes("หยุด");
 
-// 🚀 2. ตัดสินสถานะตามความสำคัญ (เรียงจากบนลงล่าง)
+                  // 🚀 2. ตัดสินสถานะตามความสำคัญ (เรียงจากบนลงล่าง)
                   if (isGov) { 
                       status = "ไปราชการ"; 
                       if (rawTime === "-" || rawTime === "") { displayTime = "08:30รก-16:30รก"; tIn = "08:30รก"; tOut = "16:30รก"; }
@@ -964,64 +970,64 @@
 
   const cleanStr = (s) => String(s).replace(/\s+/g, '');
   function checkMismatches() {
-	  let activeDB = pList.filter(p => p.isActive);
-	  let suspendedDB = pList.filter(p => !p.isActive); // หากลุ่มคนโดนระงับ
-	  let unregistered = [], missing = [], suspendedInFile = [];
-	
-	  // เช็ก 1: หาคนแปลกหน้า และ หาคนถูกระงับ
-	  parsedRecords.forEach(p => { 
-	      if(suspendedDB.find(db => cleanStr(db.name) === cleanStr(p.name))) suspendedInFile.push(p);
-	      else if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); 
-	  });
-	  
-	  // เช็ก 2: หาคนหาย
-	  activeDB.forEach(db => {
-	      if (db.category === "ผู้บริหาร") return; 
-	      if(!parsedRecords.find(p => cleanStr(p.name) === cleanStr(db.name))) missing.push(db);
-	  });
-	  
-	  if(unregistered.length === 0 && missing.length === 0 && suspendedInFile.length === 0) proceedToPreview();
-	  else showMismatchModal(unregistered, missing, suspendedInFile);
-	}
+      let activeDB = pList.filter(p => p.isActive);
+      let suspendedDB = pList.filter(p => !p.isActive); // หากลุ่มคนโดนระงับ
+      let unregistered = [], missing = [], suspendedInFile = [];
+    
+      // เช็ก 1: หาคนแปลกหน้า และ หาคนถูกระงับ
+      parsedRecords.forEach(p => { 
+          if(suspendedDB.find(db => cleanStr(db.name) === cleanStr(p.name))) suspendedInFile.push(p);
+          else if(!activeDB.find(db => cleanStr(db.name) === cleanStr(p.name))) unregistered.push(p); 
+      });
+      
+      // เช็ก 2: หาคนหาย
+      activeDB.forEach(db => {
+          if (db.category === "ผู้บริหาร") return; 
+          if(!parsedRecords.find(p => cleanStr(p.name) === cleanStr(db.name))) missing.push(db);
+      });
+      
+      if(unregistered.length === 0 && missing.length === 0 && suspendedInFile.length === 0) proceedToPreview();
+      else showMismatchModal(unregistered, missing, suspendedInFile);
+  }
 
-	function showMismatchModal(unreg, miss, suspendedInFile) {
-	  const uList = document.getElementById('unregisteredList');
-	  const mList = document.getElementById('missingList');
-	  const sList = document.getElementById('suspendedList'); // ตัวแปรใหม่
-	  uList.innerHTML = ''; mList.innerHTML = ''; sList.innerHTML = '';
-	  
-	  if(unreg.length > 0) {
-	      unreg.forEach(p => { uList.innerHTML += `<tr><td data-label="ชื่อ">${p.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--success); border-color: var(--success);" onclick="openAddFromMismatch('${p.name}')">[+ เพิ่มเข้าฐานข้อมูล]</button></td></tr>`; });
-	      document.getElementById('unregisteredSection').style.display = 'block';
-	  } else { document.getElementById('unregisteredSection').style.display = 'none'; }
-	  
-	  if(miss.length > 0) {
-	      miss.forEach(db => { mList.innerHTML += `<tr><td data-label="ชื่อ">${db.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--danger); border-color: var(--danger);" onclick="suspendFromMismatch(${db.row})">[ระงับการทำงาน]</button></td></tr>`; });
-	      document.getElementById('missingSection').style.display = 'block';
-	  } else { document.getElementById('missingSection').style.display = 'none'; }
-	  
-	  // 🌟 โชว์คนถูกระงับ
-	  if(suspendedInFile && suspendedInFile.length > 0) {
-	      suspendedInFile.forEach(p => { sList.innerHTML += `<tr><td data-label="ชื่อ" style="color: var(--gray-600);"><i class="fa-solid fa-lock"></i> ${p.name}</td><td data-label="สถานะ" style="text-align: right; color: var(--gray-500); font-size: 0.8rem;">ถูกระงับแล้ว</td></tr>`; });
-	      document.getElementById('suspendedSection').style.display = 'block';
-	  } else { document.getElementById('suspendedSection').style.display = 'none'; }
-	
-	  document.getElementById('mismatchModal').classList.add('active');
-	}
+  function showMismatchModal(unreg, miss, suspendedInFile) {
+      const uList = document.getElementById('unregisteredList');
+      const mList = document.getElementById('missingList');
+      const sList = document.getElementById('suspendedList'); // ตัวแปรใหม่
+      uList.innerHTML = ''; mList.innerHTML = ''; sList.innerHTML = '';
+      
+      if(unreg.length > 0) {
+          unreg.forEach(p => { uList.innerHTML += `<tr><td data-label="ชื่อ">${p.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--success); border-color: var(--success);" onclick="openAddFromMismatch('${p.name}')">[+ เพิ่มเข้าฐานข้อมูล]</button></td></tr>`; });
+          document.getElementById('unregisteredSection').style.display = 'block';
+      } else { document.getElementById('unregisteredSection').style.display = 'none'; }
+      
+      if(miss.length > 0) {
+          miss.forEach(db => { mList.innerHTML += `<tr><td data-label="ชื่อ">${db.name}</td><td data-label="จัดการ" style="text-align: right;"><button class="btn btn-outline" style="min-height:30px; font-size: 0.8rem; color: var(--danger); border-color: var(--danger);" onclick="suspendFromMismatch(${db.row})">[ระงับการทำงาน]</button></td></tr>`; });
+          document.getElementById('missingSection').style.display = 'block';
+      } else { document.getElementById('missingSection').style.display = 'none'; }
+      
+      // 🌟 โชว์คนถูกระงับ
+      if(suspendedInFile && suspendedInFile.length > 0) {
+          suspendedInFile.forEach(p => { sList.innerHTML += `<tr><td data-label="ชื่อ" style="color: var(--gray-600);"><i class="fa-solid fa-lock"></i> ${p.name}</td><td data-label="สถานะ" style="text-align: right; color: var(--gray-500); font-size: 0.8rem;">ถูกระงับแล้ว</td></tr>`; });
+          document.getElementById('suspendedSection').style.display = 'block';
+      } else { document.getElementById('suspendedSection').style.display = 'none'; }
+    
+      document.getElementById('mismatchModal').classList.add('active');
+  }
 
   function closeMismatchModal() { document.getElementById('mismatchModal').classList.remove('active'); }
   function proceedToPreview() { 
-	  closeMismatchModal(); 
-	  // 🚀 เตะคนถูกระงับทิ้งกลางอากาศ ก่อนส่งไปวาดตารางพรีวิว
-	  parsedRecords = parsedRecords.filter(p => {
-	      let dbMatch = pList.find(db => cleanStr(db.name) === cleanStr(p.name));
-	      if (dbMatch && dbMatch.isActive === false) return false;
-	      return true;
-	  });
-	  renderPreviewTable(); 
-	  document.getElementById('previewSection').style.display = 'block'; 
-	  document.getElementById('btnNext1').disabled = false; 
-	}
+      closeMismatchModal(); 
+      // 🚀 เตะคนถูกระงับทิ้งกลางอากาศ ก่อนส่งไปวาดตารางพรีวิว
+      parsedRecords = parsedRecords.filter(p => {
+          let dbMatch = pList.find(db => cleanStr(db.name) === cleanStr(p.name));
+          if (dbMatch && dbMatch.isActive === false) return false;
+          return true;
+      });
+      renderPreviewTable(); 
+      document.getElementById('previewSection').style.display = 'block'; 
+      document.getElementById('btnNext1').disabled = false; 
+  }
   function openAddFromMismatch(name) { closeMismatchModal(); openPersonnelModal(-1); document.getElementById('pName').value = name; }
   function suspendFromMismatch(row) {
       if(!confirm("แน่ใจหรือไม่? (ระบบจะไม่นำไปคิดสถิติอีก)")) return;
@@ -1033,44 +1039,81 @@
   }
 
   function renderPreviewTable(filterText = "") {
-	  let tbody = document.getElementById('previewTableBody'); 
-	  tbody.innerHTML = "";
-	  if(!document.getElementById('searchBox')) document.getElementById('previewSection').insertAdjacentHTML('afterbegin', `<div style="margin-bottom: 1rem;"><input type="text" id="searchBox" class="form-control" placeholder="🔍 ค้นหารายชื่อเพื่อแก้ไขด่วน..." onkeyup="renderPreviewTable(this.value)"></div>`);
-	  
-	  parsedRecords.forEach((p, idx) => {
-	      if(filterText && !p.name.includes(filterText)) return;
-	      let bgStyle = "";
-	      if (p.status === "ลืมสแกนกลับ") bgStyle = "background-color: #e0f2fe;"; 
-	      else if (p.status === "รอสอบถาม") bgStyle = "background-color: #bbf7d0;"; 
-	      else if (p.status === "สาย" || p.status === "ไปราชการ") bgStyle = "background-color: #fef08a;"; 
-	      else if (p.status !== "มาปกติ") bgStyle = "background-color: #fef08a;"; 
-	      
-	      let tr = document.createElement('tr');
-	      if (bgStyle) tr.style = bgStyle; 
-	      tr.innerHTML = `<td data-label="ลำดับ">${idx + 1}</td>
-	          <td data-label="ชื่อ-สกุล" style="font-weight: 500;">${p.name}</td>
-	          <td data-label="แผนก" style="color: #666;">${p.department}</td>
-	          <td data-label="เวลา"><input type="text" class="form-control" style="width: 100%;" value="${p.rawTimeStr}" onchange="updateTime(${idx}, this.value)"></td>
-	          <td data-label="สถานะ"><select class="form-control" style="width: 100%; ${p.status !== 'มาปกติ' ? 'border-color: var(--danger); font-weight: bold; color: var(--danger);' : ''}" onchange="updateStatus(${idx}, this.value, this.parentNode.previousElementSibling.querySelector('input'))"><option value="มาปกติ" ${p.status==='มาปกติ'?'selected':''}>มาปกติ</option><option value="สาย" ${p.status==='สาย'?'selected':''}>สาย</option><option value="ไปราชการ" ${p.status==='ไปราชการ'?'selected':''}>ไปราชการ</option><option value="ลากิจ" ${p.status==='ลากิจ'?'selected':''}>ลากิจ</option><option value="ลาป่วย" ${p.status==='ลาป่วย'?'selected':''}>ลาป่วย</option><option value="ลืมสแกนกลับ" ${p.status==='ลืมสแกนกลับ'?'selected':''}>ลืมสแกนกลับ</option><option value="รอสอบถาม" ${p.status==='รอสอบถาม'?'selected':''}>รอสอบถาม</option><option value="ขาดราชการ" ${p.status==='ขาดราชการ'?'selected':''}>ขาดราชการ</option><option value="หยุดปฏิบัติหน้าที่ชั่วคราว" ${p.status==='หยุดปฏิบัติหน้าที่ชั่วคราว'?'selected':''}>หยุดปฏิบัติหน้าที่ชั่วคราว</option></select></td>
-	          <td data-label="หมายเหตุ"><input type="text" class="form-control" style="width: 100%;" value="${p.remark}" onchange="parsedRecords[${idx}].remark = this.value"></td>`;
-	      tbody.appendChild(tr);
-	  });
-	  document.getElementById('fileRecs').innerText = `(พบ ${parsedRecords.length} รายการ)`;
-	}
+      let tbody = document.getElementById('previewTableBody'); 
+      tbody.innerHTML = "";
+      if(!document.getElementById('searchBox')) document.getElementById('previewSection').insertAdjacentHTML('afterbegin', `<div style="margin-bottom: 1rem;"><input type="text" id="searchBox" class="form-control" placeholder="🔍 ค้นหารายชื่อเพื่อแก้ไขด่วน..." onkeyup="renderPreviewTable(this.value)"></div>`);
+      
+      parsedRecords.forEach((p, idx) => {
+          if(filterText && !p.name.includes(filterText)) return;
+          let bgStyle = "";
+          if (p.status === "ลืมสแกนกลับ") bgStyle = "background-color: #e0f2fe;"; 
+          else if (p.status === "รอสอบถาม") bgStyle = "background-color: #bbf7d0;"; 
+          else if (p.status === "สาย" || p.status === "ไปราชการ") bgStyle = "background-color: #fef08a;"; 
+          else if (p.status !== "มาปกติ") bgStyle = "background-color: #fef08a;"; 
+          
+          let tr = document.createElement('tr');
+          if (bgStyle) tr.style = bgStyle; 
+          tr.innerHTML = `<td data-label="ลำดับ">${idx + 1}</td>
+              <td data-label="ชื่อ-สกุล" style="font-weight: 500;">${p.name}</td>
+              <td data-label="แผนก" style="color: #666;">${p.department}</td>
+              <td data-label="เวลา"><input type="text" class="form-control" style="width: 100%;" value="${p.rawTimeStr}" onchange="updateTime(${idx}, this.value)"></td>
+              <td data-label="สถานะ"><select class="form-control" style="width: 100%; ${p.status !== 'มาปกติ' ? 'border-color: var(--danger); font-weight: bold; color: var(--danger);' : ''}" onchange="updateStatus(${idx}, this.value, this.parentNode.previousElementSibling.querySelector('input'))"><option value="มาปกติ" ${p.status==='มาปกติ'?'selected':''}>มาปกติ</option><option value="สาย" ${p.status==='สาย'?'selected':''}>สาย</option><option value="ไปราชการ" ${p.status==='ไปราชการ'?'selected':''}>ไปราชการ</option><option value="ลากิจ" ${p.status==='ลากิจ'?'selected':''}>ลากิจ</option><option value="ลาป่วย" ${p.status==='ลาป่วย'?'selected':''}>ลาป่วย</option><option value="ลืมสแกนกลับ" ${p.status==='ลืมสแกนกลับ'?'selected':''}>ลืมสแกนกลับ</option><option value="รอสอบถาม" ${p.status==='รอสอบถาม'?'selected':''}>รอสอบถาม</option><option value="ขาดราชการ" ${p.status==='ขาดราชการ'?'selected':''}>ขาดราชการ</option><option value="หยุดปฏิบัติหน้าที่ชั่วคราว" ${p.status==='หยุดปฏิบัติหน้าที่ชั่วคราว'?'selected':''}>หยุดปฏิบัติหน้าที่ชั่วคราว</option></select></td>
+              <td data-label="หมายเหตุ"><input type="text" class="form-control" style="width: 100%;" value="${p.remark}" onchange="parsedRecords[${idx}].remark = this.value"></td>`;
+          tbody.appendChild(tr);
+      });
+      document.getElementById('fileRecs').innerText = `(พบ ${parsedRecords.length} รายการ)`;
+  }
 
   function updateTime(idx, val) { parsedRecords[idx].rawTimeStr = val; let pts = val.split('-'); parsedRecords[idx].timeIn = pts[0]?pts[0].trim():"-"; parsedRecords[idx].timeOut = pts[1]?pts[1].trim():"-"; }
   function updateStatus(idx, ns, tInput) {
-	  parsedRecords[idx].status = ns;
-	  if (ns === "ไปราชการ") { tInput.value = "08:30รก-16:30รก"; }
-	  else if (ns === "ลากิจ" || ns === "ลาป่วย") { tInput.value = "-"; }
-	  else if (ns === "หยุดปฏิบัติหน้าที่ชั่วคราว") { tInput.value = "ย-ย"; }
-	  else if (ns === "ขาดราชการ" || (ns === "มาปกติ" && parsedRecords[idx].rawTimeStr === "")) { tInput.value = ""; }
-	  else if (ns === "รอสอบถาม") { tInput.value = "ขม-ขก"; }
-	  updateTime(idx, tInput.value);
-	  renderPreviewTable(document.getElementById('searchBox') ? document.getElementById('searchBox').value : "");
-	}
+      parsedRecords[idx].status = ns;
+      if (ns === "ไปราชการ") { tInput.value = "08:30รก-16:30รก"; }
+      else if (ns === "ลากิจ" || ns === "ลาป่วย") { tInput.value = "-"; }
+      else if (ns === "หยุดปฏิบัติหน้าที่ชั่วคราว") { tInput.value = "ย-ย"; }
+      else if (ns === "ขาดราชการ" || (ns === "มาปกติ" && parsedRecords[idx].rawTimeStr === "")) { tInput.value = ""; }
+      else if (ns === "รอสอบถาม") { tInput.value = "ขม-ขก"; }
+      updateTime(idx, tInput.value);
+      renderPreviewTable(document.getElementById('searchBox') ? document.getElementById('searchBox').value : "");
+  }
+
+  // 🌟 เช็กวันที่ซ้ำแบบ Real-time
+  let isDuplicateDate = false;
+  let duplicateDateInfo = "";
+
+  function checkSelectedDate() {
+      const dateInput = document.getElementById('reportDate');
+      const badge = document.getElementById('dateCheckBadge');
+      if (!dateInput || !badge || !dateInput.value || !sysToken) return;
+
+      isDuplicateDate = false;
+      duplicateDateInfo = "";
+      badge.innerHTML = `<span style="color: var(--gray-600);">⏳ กำลังตรวจสอบข้อมูลวันที่นี้...</span>`;
+
+      google.script.run
+          .withSuccessHandler(res => {
+              if (res && res.exists) {
+                  isDuplicateDate = true;
+                  duplicateDateInfo = `บันทึกไปแล้วโดย ${res.adminName} เมื่อ ${res.timestamp}`;
+                  badge.innerHTML = `<div style="background: #fff7ed; border: 1px solid #fdba74; color: #c2410c; padding: 0.75rem 1rem; border-radius: 0.75rem;">
+                      ⚠️ <strong>วันที่นี้ทำรายงานไปแล้ว</strong> โดย ${res.adminName} เมื่อ ${res.timestamp}<br>
+                      <span style="font-size: 0.8rem;">(หากดำเนินการต่อ ระบบจะเขียนทับข้อมูลเดิมของวันนี้)</span>
+                  </div>`;
+              } else {
+                  isDuplicateDate = false;
+                  badge.innerHTML = `<span style="color: var(--success);">✅ วันที่นี้ยังไม่มีข้อมูลในระบบ (พร้อมบันทึก)</span>`;
+              }
+          })
+          .withFailureHandler(() => {
+              badge.innerHTML = "";
+          })
+          .checkDateExists(sysToken, dateInput.value);
+  }
 
   function submitReport() {
+      if (isDuplicateDate) {
+          const ok = confirm(`⚠️ ยืนยันการบันทึกทับ?\n\nวันที่นี้${duplicateDateInfo}\n\nต้องการดำเนินการต่อและเขียนทับข้อมูลเดิมหรือไม่?`);
+          if (!ok) return;
+      }
       showLoading("กำลังสร้างรายงาน...");
       let execData = [];
       document.querySelectorAll('[id^="execName_"]').forEach((card, idx) => { execData.push({ name: card.innerText, status: document.getElementById(`execStatus_${idx}`).value }); });
@@ -1081,7 +1124,15 @@
           document.getElementById('btnOpenSheet').onclick = () => window.open(url, '_blank');
       }).withFailureHandler(err => { hideLoading(); showToast(err.message, "error"); }).saveAndGenerateReport(sysToken, parsedRecords, execData, document.getElementById('reportDate').value, globalFileName, document.getElementById('signAdmin').value, signers);
   }
-  function resetAdminView() { goToStep(1); document.getElementById('fileInput').value = ''; document.getElementById('previewSection').style.display = 'none'; document.getElementById('btnNext1').disabled = true; parsedRecords = []; }
+
+  function resetAdminView() { 
+      goToStep(1); 
+      document.getElementById('fileInput').value = ''; 
+      document.getElementById('previewSection').style.display = 'none'; 
+      document.getElementById('btnNext1').disabled = true; 
+      parsedRecords = []; 
+      checkSelectedDate(); // 🌟 อัปเดตสถานะวันที่ใหม่
+  }
   
   function loadExecutives() {
       google.script.run.withSuccessHandler(opt => {
